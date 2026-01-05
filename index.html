@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des tâches</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+        }
+        form, .taches-container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .tache {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+        .tache:last-child {
+            border-bottom: none;
+        }
+        .actions button {
+            width: auto;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gestion des tâches</h1>
+    
+
+    <!-- Formulaire pour ajouter/modifier une tâche -->
+    <form id="formTache">
+        <input type="hidden" id="tacheId" value="">
+        <input type="text" id="nom" placeholder="Nom de la tâche" required>
+        <textarea id="description" placeholder="Description de la tâche" required></textarea>
+        <select id="statut" required>
+            <option value="">-- Sélectionnez le statut --</option>
+            <option value="en cours">En cours</option>
+            <option value="termine">Terminé</option>
+        </select>
+        <button type="submit">Ajouter / Modifier</button>
+    </form>
+
+    <!-- Liste des tâches -->
+    <div class="taches-container" id="tachesContainer">
+        <!-- Les tâches seront affichées ici -->
+    </div>
+
+    <script>
+        const form = document.getElementById('formTache');
+        const tachesContainer = document.getElementById('tachesContainer');
+        const tacheIdInput = document.getElementById('tacheId');
+        const nomInput = document.getElementById('nom');
+        const descriptionInput = document.getElementById('description');
+        const statutInput = document.getElementById('statut');
+
+        // Fonction pour afficher les tâches
+        async function afficherTaches() {
+            const res = await fetch('http://localhost:3000/taches');
+            const taches = await res.json();
+
+            tachesContainer.innerHTML = '';
+            taches.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'tache';
+                div.innerHTML = `
+                    <strong>${t.nom}</strong> (${t.statut})<br>
+                    ${t.description}
+                    <div class="actions">
+                        <button onclick="modifierTache(${t.id})">Modifier</button>
+                        <button onclick="supprimerTache(${t.id})">Supprimer</button>
+                    </div>
+                `;
+                tachesContainer.appendChild(div);
+            });
+        }
+
+        // Ajouter ou modifier une tâche
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = tacheIdInput.value;
+            const tacheData = {
+                nom: nomInput.value,
+                description: descriptionInput.value,
+                statut: statutInput.value
+            };
+
+            if (id) {
+                // Modifier
+                await fetch(`http://localhost:3000/taches/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tacheData)
+                });
+            } else {
+                // Ajouter
+                await fetch('http://localhost:3000/taches', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tacheData)
+                });
+            }
+
+            // Réinitialiser le formulaire
+            form.reset();
+            tacheIdInput.value = '';
+            afficherTaches();
+        });
+
+        // Supprimer une tâche
+        async function supprimerTache(id) {
+            await fetch(`http://localhost:3000/taches/${id}`, { method: 'DELETE' });
+            afficherTaches();
+        }
+
+        // Préparer la modification
+        async function modifierTache(id) {
+            const res = await fetch('http://localhost:3000/taches');
+            const taches = await res.json();
+            const tache = taches.find(t => t.id === id);
+
+            tacheIdInput.value = tache.id;
+            nomInput.value = tache.nom;
+            descriptionInput.value = tache.description;
+            statutInput.value = tache.statut;
+        }
+
+        // Charger les tâches au démarrage
+        afficherTaches();
+    </script>
+</body>
+</html>
